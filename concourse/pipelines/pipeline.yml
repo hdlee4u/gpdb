@@ -76,6 +76,12 @@ groups:
   - MADlib_Test_gppkg_Planner_centos6
   - MADlib_Test_gppkg_Orca_centos7
   - MADlib_Test_gppkg7_Planner_centos7
+  - postgis_centos6_build
+  - postgis_centos6_ORCA_test
+  - postgis_centos6_planner_test
+  - postgis_centos7_build
+  - postgis_centos7_ORCA_test
+  - postgis_centos7_planner_test
   - gate_advanced_analytics_end
 ################################
   - gate_general_misc_start
@@ -216,6 +222,12 @@ groups:
   - MADlib_Test_gppkg_Planner_centos6
   - MADlib_Test_gppkg_Orca_centos7
   - MADlib_Test_gppkg7_Planner_centos7
+  - postgis_centos6_build
+  - postgis_centos6_ORCA_test
+  - postgis_centos6_planner_test
+  - postgis_centos7_build
+  - postgis_centos7_ORCA_test
+  - postgis_centos7_planner_test
   - gate_advanced_analytics_end
 
 - name: G:General
@@ -593,6 +605,39 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{madlib-gppkg-versioned-file}}
+
+- name: gcc_4.4.2_snowflake
+  type: s3
+  source:
+    access_key_id: {{madlib-s3-access_key_id}}
+    bucket: {{gcc-442-bucket}}
+    region_name: us-west-2
+    secret_access_key: {{madlib-s3-secret_access_key}}
+    versioned_file: compiled-rhel-gcc-442.tar.gz
+
+- name: postgis_src
+  type: git
+  source:
+    branch: master
+    uri: https://github.com/greenplum-db/geospatial.git
+
+- name: postgis_gppkg_centos6
+  type: s3
+  source:
+    access_key_id: {{madlib-s3-access_key_id}}
+    bucket: {{postgis-gppkg-bucket}}
+    region_name: us-west-2
+    secret_access_key: {{madlib-s3-secret_access_key}}
+    versioned_file: {{postgis-gppkg-versioned_file_centos6}}
+
+- name: postgis_gppkg_centos7
+  type: s3
+  source:
+    access_key_id: {{madlib-s3-access_key_id}}
+    bucket: {{postgis-gppkg-bucket}}
+    region_name: us-west-2
+    secret_access_key: {{madlib-s3-secret_access_key}}
+    versioned_file: {{postgis-gppkg-versioned_file_centos7}}
 
 ## ======================================================================
 ## reusable anchors
@@ -2556,6 +2601,181 @@ jobs:
       TEST_OS: centos
       ORCA: "off"
 
+- name: postgis_centos6_build
+  plan:
+  - aggregate:
+    - get: postgis_src
+    - get: madlib_ci
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      trigger: true
+      passed:
+      - gate_advanced_analytics_start
+    - get: centos-gpdb-dev-6
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: gcc_4.4.2_snowflake
+  - task: postgis_gpdb_build
+    file: madlib_ci/concourse/tasks/build_postgis.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos6
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+  - put: postgis_gppkg_centos6
+    params:
+      file: postgis_gppkg/postgis-*.gppkg
+
+- name: postgis_centos6_ORCA_test
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: postgis_src
+    - get: postgis_gppkg
+      resource: postgis_gppkg_centos6
+      passed:
+      - postgis_centos6_build
+      trigger: true
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed:
+      - postgis_centos6_build
+    - get: centos-gpdb-dev-6
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: gcc_4.4.2_snowflake
+  - task: test_postgis
+    file: madlib_ci/concourse/tasks/test_postgis.yml
+    image: centos-gpdb-dev-6
+    params:
+      PGOPTIONS: '-c optimizer=on'
+      TEST_OS: centos6
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+
+- name: postgis_centos6_planner_test
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: postgis_src
+    - get: postgis_gppkg
+      resource: postgis_gppkg_centos6
+      passed:
+      - postgis_centos6_build
+      trigger: true
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed:
+      - postgis_centos6_build
+    - get: centos-gpdb-dev-6
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: gcc_4.4.2_snowflake
+  - task: test_postgis
+    file: madlib_ci/concourse/tasks/test_postgis.yml
+    image: centos-gpdb-dev-6
+    params:
+      PGOPTIONS: '-c optimizer=off'
+      TEST_OS: centos6
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+
+- name: postgis_centos7_build
+  plan:
+  - aggregate:
+    - get: postgis_src
+    - get: madlib_ci
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      trigger: true
+      passed:
+      - gate_advanced_analytics_start
+    - get: centos-gpdb-dev-7
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: gcc_4.4.2_snowflake
+  - task: postgis_gpdb_build
+    file: madlib_ci/concourse/tasks/build_postgis.yml
+    image: centos-gpdb-dev-7
+    params:
+      TEST_OS: centos7
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+  - put: postgis_gppkg_centos7
+    params:
+      file: postgis_gppkg/postgis-*.gppkg
+
+- name: postgis_centos7_ORCA_test
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: postgis_src
+    - get: postgis_gppkg
+      resource: postgis_gppkg_centos7
+      passed:
+      - postgis_centos7_build
+      trigger: true
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      passed: [postgis_centos7_build]
+    - get: centos-gpdb-dev-7
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: gcc_4.4.2_snowflake
+  - task: test_postgis
+    file: madlib_ci/concourse/tasks/test_postgis.yml
+    image: centos-gpdb-dev-7
+    params:
+      PGOPTIONS: '-c optimizer=on'
+      TEST_OS: centos7
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+
+- name: postgis_centos7_planner_test
+  plan:
+  - aggregate:
+    - get: madlib_ci
+    - get: postgis_src
+    - get: postgis_gppkg
+      resource: postgis_gppkg_centos7
+      passed:
+      - postgis_centos7_build
+      trigger: true
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      passed:
+      - postgis_centos7_build
+    - get: centos-gpdb-dev-7
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: gcc_4.4.2_snowflake
+  - task: test_postgis
+    file: madlib_ci/concourse/tasks/test_postgis.yml
+    image: centos-gpdb-dev-7
+    params:
+      PGOPTIONS: '-c optimizer=off'
+      TEST_OS: centos7
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+
 - name: gate_advanced_analytics_end
   plan:
   - get: gpdb_src
@@ -2565,6 +2785,12 @@ jobs:
     - MADlib_Test_gppkg_Planner_centos6
     - MADlib_Test_gppkg_Orca_centos7
     - MADlib_Test_gppkg7_Planner_centos7
+    - postgis_centos6_build
+    - postgis_centos6_ORCA_test
+    - postgis_centos6_planner_test
+    - postgis_centos7_build
+    - postgis_centos7_ORCA_test
+    - postgis_centos7_planner_test
 
 ############### Advanced Analytics End
 
@@ -3117,4 +3343,13 @@ jobs:
     - QP_runaway-query
     - QP_optimizer-functional
     - validate_pipeline
-
+    - MADlib_Test_gppkg_Orca_centos6
+    - MADlib_Test_gppkg_Planner_centos6
+    - MADlib_Test_gppkg_Orca_centos7
+    - MADlib_Test_gppkg7_Planner_centos7
+    - postgis_centos6_build
+    - postgis_centos6_ORCA_test
+    - postgis_centos6_planner_test
+    - postgis_centos7_build
+    - postgis_centos7_ORCA_test
+    - postgis_centos7_planner_test
