@@ -601,10 +601,12 @@ resources:
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
-    bucket: {{madlib-bucket-name}}
+    bucket: madlib-concourse
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{madlib-gppkg-versioned-file}}
+    ## This is a new gppkg built against gpdb6, which is not released yet
+    ## We have to use this version to test against latest gpdb6
+    versioned_file: non-release/madlib-1.12-debug_rhel6_gpdb5_master.gppkg
 
 - name: gcc_4.4.2_snowflake
   type: s3
@@ -625,19 +627,19 @@ resources:
   type: s3
   source:
     access_key_id: {{madlib-s3-access_key_id}}
-    bucket: {{postgis-gppkg-bucket}}
+    bucket: postgis-gppkg
     region_name: us-west-2
     secret_access_key: {{madlib-s3-secret_access_key}}
-    versioned_file: {{postgis-gppkg-versioned_file_centos6}}
+    versioned_file: postgis-2.1.5-gp5_master-rhel6-x86_64.gppkg
 
 - name: postgis_gppkg_centos7
   type: s3
   source:
     access_key_id: {{madlib-s3-access_key_id}}
-    bucket: {{postgis-gppkg-bucket}}
+    bucket: postgis-gppkg
     region_name: us-west-2
     secret_access_key: {{madlib-s3-secret_access_key}}
-    versioned_file: {{postgis-gppkg-versioned_file_centos7}}
+    versioned_file: postgis-2.1.5-gp5_master-rhel7-x86_64.gppkg
 
 ## ======================================================================
 ## reusable anchors
