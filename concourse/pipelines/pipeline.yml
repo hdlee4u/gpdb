@@ -305,21 +305,6 @@ resources:
       ###########################################################
       bucket_path: {{tf-bucket-path}}
 
-- name: terraform_for_dpm
-  type: terraform
-  source:
-    env:
-      AWS_ACCESS_KEY_ID: {{gpdb4-tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{gpdb4-tf-machine-secret-access-key}}
-    storage:
-      access_key_id: {{gpdb4-tf-machine-access-key-id}}
-      secret_access_key: {{gpdb4-tf-machine-secret-access-key}}
-      region_name: {{aws-region}}
-      # This is not parameterized, on purpose. All tfstates will go to this spot,
-      # and different teams will place there clusters' tfstate files under different paths
-      bucket: pivotal-pa-toolsmiths-pipeline-dynamic-terraform
-      bucket_path: {{tf-bucket-path}}
-
 - name: aix_environments
   type: pool
   source:
