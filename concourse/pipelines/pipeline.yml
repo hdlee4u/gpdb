@@ -622,6 +622,7 @@ resources:
   source:
     branch: master
     uri: https://github.com/greenplum-db/geospatial.git
+    tag_filter: rel/v2.1.5
 
 - name: postgis_gppkg_centos6
   type: s3
